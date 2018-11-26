@@ -1,0 +1,104 @@
+ <link href="../JavaScripts/bootstrap-table.css" rel="stylesheet" />
+    <script src="../JavaScripts/bootstrap-table.js"></script>
+    <script src="../JavaScripts/bootstrap-table-zh-CN.js"></script>
+    <script src="../JavaScripts/PopSelect.js?181016006 "></script>
+    <script type="text/javascript">
+        $.MvcSheet.Loaded = function (sheetInfo) {
+            //修改默认打印链接，实现自定义的打印页面
+            var fileurl = window.location.pathname;
+            printUrlBase = "../MvcSheetPrint.aspx?InstanceId=" + $.MvcSheetUI.SheetInfo.InstanceId +
+                    "&Mode=Print&SheetCode=QAEarlyRetirement&PrintSheetName=" + fileurl.substring(0, fileurl.lastIndexOf("/"));
+            $.MvcSheetUI.SheetInfo.PrintUrl = printUrlBase + "/QAEarlyRetirementPrint.html";
+
+            $("tr").children("td").attr("style", "text-align:center;");
+
+            //修改标题
+            //$("#lblTitle").html($("#lblTitle").html());
+
+            if (isWork()) {
+                initPopselect($.MvcSheetUI.GetElement("QER_OrdNo"));
+            }
+        }
+
+        function initPopselect(e) {
+            console.log(e);
+            e.PopSelect({
+                ajaxsrc: _PORTALROOT_GLOBAL + "/Ajax/BusinessHandler.ashx/GetItemRollList",
+                Columns: [
+                { checkbox: true, width: "40px", formatter: checkFormatter },
+                { field: 'BASEQN', title: '工单号', sortable: true, width: "80px" },
+                { field: 'BAROLID', title: '卷号', sortable: true, width: "20px" },
+                { field: 'BAPROD', title: '物料编号', sortable: true, width: "80px" },
+                { field: 'ITEMDESC', title: '描述', width: "140px" },
+                { field: 'BAROLTH', title: '卷长', width: "50px", align: "right", formatter: numFormatter },
+                { field: 'BAR_LUM', title: '卷长单位', width: "30px" },
+                { field: 'BANETWT', title: '净重', width: "60px", align: "right", formatter: numFormatter },
+                { field: 'barcustno', title: '客户编号', width: "50px" },
+                { field: 'barcustnm', title: '客户', width: "100px" },
+                { field: 'barpackreq', title: '营业', width: "50px" },
+                { field: 'BAUNIT', title: '单位', width: "30px" },
+                { field: 'BAR_SFT', title: '班次', width: "50px" },
+                { field: 'BATURNDTE', title: '日期', width: "100px" },
+                ],
+                Multiple: true,
+                DisplayLink: true,
+                AutoRefresh: true,
+                DisplaySearch: false,
+                PopupWidth: "900px",
+                PopupHeight: "600px",
+                ToolBar: "<div class='form-inline'><div class='form-group'><input name='WorkOrder' class='form-control' type='text' isclear='false' autofocus='autofocus' placeholder='工单号'></div>" +
+                     "<a herf='void(0);' class='btn btn-default btn_search'>查找</a></div>",
+                CheckedParams: function () {
+                    var wo = $.MvcSheetUI.GetControlValue("QER_OrdNo");
+                    this.setParamer({ WorkOrder: wo });
+                    return true;
+                },
+                CallBack: function (data) {
+                    if (data != null) {
+                        try {
+                            //$.LoadingMask.Show("处理数据中...", false);
+                            $.MvcSheetUI.SetControlValue("QER_OrdNo", data[0].BASEQN);
+                            $.MvcSheetUI.SetControlValue("QER_ItemPart", data[0].BAPROD);
+                            $.MvcSheetUI.SetControlValue("QER_ItemDesc", data[0].ITEMDESC);
+                            $.MvcSheetUI.SetControlValue("QER_CustItem", data[0].barcustno + '/' + data[0].barcustnm);
+                            $.MvcSheetUI.SetControlValue("QER_Sales", data[0].barpackreq);
+                            var qty = 0;
+                            var grid = $.MvcSheetUI.GetElement("QER_RollDtl").SheetGridView();
+                            grid._Clear();
+                            for (var i in data) {
+                                qty += data[i].BANETWT;
+                                //保存数据到明细列表
+                                grid._AddRow();
+                                var tmprow = grid.RowCount;
+                                $.MvcSheetUI.SetControlValue('QER_RollDtl.QERD_OrdNo', data[i].BASEQN, tmprow);
+                                $.MvcSheetUI.SetControlValue('QER_RollDtl.QERD_Roll', data[i].BAROLID, tmprow);
+                                $.MvcSheetUI.SetControlValue('QER_RollDtl.QERD_RollQty', data[i].BAROLTH, tmprow);
+                                $.MvcSheetUI.SetControlValue('QER_RollDtl.QRED_RollUm', data[i].BAR_LUM, tmprow);
+                                $.MvcSheetUI.SetControlValue('QER_RollDtl.QERD_ProdQty', data[i].BANETWT, tmprow);
+                                $.MvcSheetUI.SetControlValue('QER_RollDtl.QERD_Uom', data[i].BAUNIT, tmprow);
+                                $.MvcSheetUI.SetControlValue('QER_RollDtl.QERD_Shift', data[i].BAR_SFT, tmprow);
+                                $.MvcSheetUI.SetControlValue('QER_RollDtl.QERD_Date', data[i].BATURNDTE.toString().substring(0,10), tmprow);
+                                $.MvcSheetUI.SetControlValue('QER_RollDtl.QERD_AbQty', data[i].BANETWT, tmprow);
+                            }
+                            $.MvcSheetUI.SetControlValue("QER_OrdQty", qty);
+                        } catch (e) {
+                            console.log(e);
+                        }
+                        //finally {
+                        //        $.LoadingMask.Hide();
+                        //    }
+                        return true;
+                    }
+                }
+            })
+        }
+
+        function checkFormatter(value, row, index) {
+            //设置已选数据为选中
+            var data = $.MvcSheetUI.GetElement("QER_RollDtl").SheetGridView().GetValue();
+            return data.filter(function (x) { return x.QERD_Roll == row.BAROLID && x.QERD_OrdNo == row.BASEQN; }).length > 0;
+        }
+
+        function numFormatter(value, row, index) {
+            return (value || 0).toString().replace(/(\d)(?=(?:\d{3})+$)/g, '$1,');
+        }
