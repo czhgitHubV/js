@@ -1,4 +1,4 @@
- //格式化当前时间为yyyy-mm-dd形式
+ //设置时间格式(年月日时分秒)，可以自己设置，这里设置的时间格式为：2019-01-02 09:09:09
 	function getNowFormatDate() {
 		var date = new Date();
 		var seperator1 = "-";
@@ -13,6 +13,6 @@
 		}
 		var currentdate = date.getFullYear() + seperator1 + month + seperator1 + strDate
 				+ " " + ("00" + date.getHours()).substring(("00" + date.getHours()).length - 2) + seperator2 + ("00" + date.getMinutes()).substring(("00" + date.getMinutes()).length - 2)
-				+ seperator2 + date.getSeconds();
+				+ seperator2 + ("00" + date.getSeconds()).substring(("00" + date.getSeconds()).length - 2);
 		return currentdate;
 	}
